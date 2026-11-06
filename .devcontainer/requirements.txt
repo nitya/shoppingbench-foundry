@@ -1,0 +1,9 @@
+# Extras on top of the project install (pip install -e ".[agents,dev]").
+# Notebooks and walkthrough helpers.
+jupyterlab>=4.2
+ipykernel>=6.29
+pandas>=2.2
+matplotlib>=3.9
+# Foundry SDK for code-first project, agent, and evaluation calls.
+azure-ai-projects>=2.10.0
+python-dotenv>=1.0
