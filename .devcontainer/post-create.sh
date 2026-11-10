@@ -9,8 +9,8 @@ python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip --quiet
 
-echo "==> Installing project with agent and dev extras, plus workshop tools"
-pip install -e ".[agents,dev]" -r .devcontainer/requirements.txt --quiet
+echo "==> Installing dependencies from .devcontainer/requirements.txt"
+pip install -r .devcontainer/requirements.txt --quiet
 
 echo "==> Registering Jupyter kernel"
 python -m ipykernel install --user --name shoppingbench --display-name "Python (shoppingbench)"

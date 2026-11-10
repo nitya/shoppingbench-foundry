@@ -1,9 +1,15 @@
-# Extras on top of the project install (pip install -e ".[agents,dev]").
+# Full environment: install from the repo root with
+#   pip install -r .devcontainer/requirements.txt
+
+# Project (catalog, grader, tool API) plus hosted-agent and test/lint extras.
+-e .[agents,dev]
+
 # Notebooks and walkthrough helpers.
 jupyterlab>=4.2
 ipykernel>=6.29
 pandas>=2.2
 matplotlib>=3.9
-# Foundry SDK for code-first project, agent, and evaluation calls.
-azure-ai-projects>=2.10.0
 python-dotenv>=1.0
+
+# Foundry SDK. 2.5+ requires openai>=3, which conflicts with the project's openai<3 pin.
+azure-ai-projects>=2.4.0,<2.5

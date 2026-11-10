@@ -12,6 +12,7 @@
     "memory": "8gb"
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "test -x .venv/bin/pip && .venv/bin/pip install -r .devcontainer/requirements.txt --quiet || echo 'Dependencies not installed: run bash .devcontainer/post-create.sh'",
   "forwardPorts": [8000],
   "portsAttributes": {
     "8000": { "label": "ShoppingBench tool API", "onAutoForward": "silent" }

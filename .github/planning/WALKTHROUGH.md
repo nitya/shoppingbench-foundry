@@ -18,6 +18,31 @@ has a checkbox so you can track progress.
 
 ## The big picture
 
+### What problem do we start with?
+
+You have a small, cheap model (**MAI-Code-1.1-Flash**) and a job that needs
+several tool calls in a row. A shopper asks for something specific, for example
+*"single-pack chili powder above 375 pesos"*. The agent has to:
+
+1. search the catalog;
+2. inspect the candidates;
+3. recommend the exact product IDs, in order;
+4. close the episode;
+5. explain its pick using only the evidence it saw.
+
+Every correct product has a near-identical **decoy** that breaks one
+constraint, so guessing doesn't work.
+
+Out of the box, the agent often gets the right product and still fails the job.
+It forgets to terminate, runs out of steps without recommending anything, or
+answers without checking the details. Baseline scores range from **0.25 to
+0.86** across the five tasks.
+
+The question this repo answers: **can you get a small model to frontier-level
+quality on a multi-step agent task, at a fraction of the cost, and prove it?**
+
+### What does one episode look like?
+
 ```mermaid
 flowchart LR
     User["Shopping request"] --> Agent["Hosted agent<br/>(MAI-Code-1.1-Flash)"]
@@ -30,10 +55,60 @@ flowchart LR
     RFT["Reinforcement fine-tuning"] -.->|"changes weights"| Agent
 ```
 
-The story: a base agent scores poorly, mostly because it doesn't finish the job
-properly. **Agent Optimizer** fixes a lot of that without touching the model.
-**RFT** helps further only where calibration shows there is something to learn.
-Every claim is backed by saved per-episode receipts.
+Every episode leaves a **receipt**: the tool calls, the IDs it recommended,
+token usage, and latency. A deterministic grader turns that receipt into a
+score, so every number in this repo can be re-checked from disk.
+
+### What steps do we take to fix it?
+
+Use the cheapest fix first, and only move on when the measurements say the
+previous step isn't enough:
+
+```mermaid
+flowchart LR
+    M["1. Measure<br/>freeze a baseline"] --> D["2. Diagnose<br/>read failing receipts"]
+    D --> O["3. Optimize config<br/>Agent Optimizer"]
+    O --> C{"4. Calibrate<br/>is there signal<br/>left to learn?"}
+    C -->|"no"| S["6. Select and verify<br/>sealed final test"]
+    C -->|"yes"| R["5. Fine-tune<br/>guarded RFT"]
+    R --> S
+```
+
+| Step | Question it answers | What changes |
+|---|---|---|
+| 1. Measure | How good is the agent today? | Nothing yet. 30 development cases × 3 runs, scored the same way at every stage |
+| 2. Diagnose | Why is it losing points? | Nothing yet. Read the receipts: unfinished behavior, not missing knowledge |
+| 3. Optimize config | Can better instructions and tool descriptions fix it? | Instructions, skills, tool text. The model is unchanged |
+| 4. Calibrate | Is there anything left for training to learn? | Nothing. Checks that the reward separates good runs from bad ones |
+| 5. Fine-tune (RFT) | Can training fix what configuration couldn't? | Model weights. Only for Voucher, Web (static), Web (live) |
+| 6. Select and verify | Which version should ship, and does it hold up on unseen cases? | Nothing. Pick on development data, open the sealed test once |
+
+### Where do we end up?
+
+| Agent | Base | Final | How it got there |
+|---|---:|---:|---|
+| Product | 0.753 | **0.941** | Agent Optimizer only |
+| Shop | 0.796 | **0.937** | Agent Optimizer only |
+| Voucher | 0.855 | **0.925** | Optimizer, then RFT |
+| Web (static) | 0.691 | **0.729** | Optimizer (RFT offers a cheaper option at 0.718) |
+| Web (live) | 0.250 | **0.903** | Optimizer, then RFT; 0.906 on the sealed test |
+
+Compared with GPT-5.6 models (Luna, Terra, Sol) on the same cases, the tuned
+small model has the highest score on Product, Shop, and Voucher, at a fraction
+of Terra's and Sol's cost. On both Web tasks, larger models still score higher.
+The [README cost table](../../README.md#cost-comparison-with-gpt-56) has the
+details.
+
+Two things carry over to your own agents:
+
+1. **A repeatable method:** measure, diagnose, optimize, then train only if
+   calibration justifies it, all on one evaluation contract.
+2. **A packaged skill:** [MAI-agent-hillclimb](../skills/mai-agent-hillclimb/SKILL.md),
+   which lets a coding agent run the same journey on your agent (Part C).
+
+> The rest of this walkthrough follows the same path: Part A checks the
+> evidence for each step locally, Part B reruns it on your own Foundry
+> project, and Part C shows how to reuse it.
 
 ## Where things live
 
